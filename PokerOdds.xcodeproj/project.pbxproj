@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -17,7 +17,7 @@
 
 /* Begin PBXFileReference section */
 		016686A5222CE075612798B6 /* PokerOddsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerOddsApp.swift; sourceTree = "<group>"; };
-		08076D8B31E730439AC6B583 /* PokerOdds.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PokerOdds.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		08076D8B31E730439AC6B583 /* PokerOdds.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PokerOdds.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0AB4748318578E191250C77F /* Card.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Card.swift; sourceTree = "<group>"; };
 		3EE1C441684591CE3CB5B79F /* HandEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandEvaluator.swift; sourceTree = "<group>"; };
 		54BBBC9A58CE9A6ABA080EE7 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -102,7 +102,6 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					124FBC8D03C7C053106C628A = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -117,7 +116,6 @@
 			);
 			mainGroup = 0512B1164849441CF580A62F;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -148,6 +146,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = AB86U4DT8H;
 				INFOPLIST_FILE = PokerOdds/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -229,6 +228,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = AB86U4DT8H;
 				INFOPLIST_FILE = PokerOdds/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

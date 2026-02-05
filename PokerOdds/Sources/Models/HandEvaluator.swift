@@ -184,7 +184,7 @@ extension Array {
         guard size < count else { return [self] }
         
         var result: [[Element]] = []
-        var indices = Array(0..<size)
+        var indices = [Int](0..<size)
         
         while true {
             result.append(indices.map { self[$0] })
