@@ -16,59 +16,63 @@ struct ContentView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Scrollable content
-            ScrollView(.vertical, showsIndicators: true) {
-                VStack(alignment: .leading, spacing: 16) {
-                    // Header
-                    Text("♠️ 德州扑克计算器")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                    
-                    // Opponents selector
-                    opponentsSection
-                    
-                    // Hole cards
-                    cardSection(
-                        title: "🃏 你的手牌",
-                        cards: $holeCards,
-                        maxCards: 2,
-                        excluded: Set(communityCards)
-                    )
-                    
-                    // Community cards
-                    cardSection(
-                        title: "🎴 公共牌",
-                        cards: $communityCards,
-                        maxCards: 5,
-                        excluded: Set(holeCards)
-                    )
-                    
-                    // Stage indicator
-                    stageIndicator
-                    
-                    // Results
-                    if let result = result {
-                        resultsView(result)
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-                .padding(.bottom, 20)
-            }
-            
-            // Fixed bottom button
+        ZStack {
+            Color(.systemGroupedBackground)
+                .ignoresSafeArea()
+
             VStack(spacing: 0) {
-                Divider()
-                calculateButton
+                ScrollView(.vertical, showsIndicators: true) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Header
+                        Text("♠️ 德州扑克计算器")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+
+                        // Opponents selector
+                        opponentsSection
+
+                        // Hole cards
+                        cardSection(
+                            title: "🃏 你的手牌",
+                            cards: $holeCards,
+                            maxCards: 2,
+                            excluded: Set(communityCards)
+                        )
+
+                        // Community cards
+                        cardSection(
+                            title: "🎴 公共牌",
+                            cards: $communityCards,
+                            maxCards: 5,
+                            excluded: Set(holeCards)
+                        )
+
+                        // Stage indicator
+                        stageIndicator
+
+                        // Results
+                        if let result = result {
+                            resultsView(result)
+                        }
+                    }
                     .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                    .padding(.bottom, 8)
+                    .padding(.top, 16)
+                    .padding(.bottom, 20)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                VStack(spacing: 0) {
+                    Divider()
+                    calculateButton
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        .padding(.bottom, 8)
+                }
+                .background(Color(.systemGroupedBackground))
             }
-            .background(Color(.systemGroupedBackground))
         }
-        .background(Color(.systemGroupedBackground))
     }
+
     
     var opponentsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
