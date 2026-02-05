@@ -395,7 +395,7 @@ struct ChipSelector: View {
     }
 }
 
-// MARK: - Casino Card Slot
+// MARK: - Casino Card Slot (for hole cards)
 struct CasinoCardSlot: View {
     let card: Card?
     @Binding var allCards: [Card]
@@ -404,6 +404,7 @@ struct CasinoCardSlot: View {
     let excluded: Set<Card>
     
     @State private var showPicker = false
+    @State private var isFlipped = false
     
     var body: some View {
         Button(action: {
@@ -415,28 +416,17 @@ struct CasinoCardSlot: View {
         }) {
             ZStack {
                 if let card = card {
-                    // Card face
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.chipWhite)
+                    // Card back (for animation)
+                    CardBackView()
+                        .opacity(!isFlipped ? 1 : 0)
+                        .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
                     
-                    VStack(spacing: 0) {
-                        Text(card.rank.symbol)
-                            .font(.system(size: 16, weight: .black))
-                        Text(card.suit.symbol)
-                            .font(.system(size: 14))
-                    }
-                    .foregroundColor(card.suit.color == "red" ? .red : .black)
+                    // Card front
+                    PokerCardFace(card: card)
+                        .opacity(isFlipped ? 1 : 0)
+                        .rotation3DEffect(.degrees(isFlipped ? 0 : -180), axis: (x: 0, y: 1, z: 0))
                 } else {
-                    // Empty slot
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.black.opacity(0.4))
-                    
-                    RoundedRectangle(cornerRadius: 6)
-                        .strokeBorder(Color.chipGold.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [4]))
-                    
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.chipGold.opacity(0.7))
+                    EmptyCardSlot(isTappable: true)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -449,6 +439,21 @@ struct CasinoCardSlot: View {
                 maxCards: maxCards,
                 excluded: excluded
             )
+        }
+        .onAppear {
+            if card != nil { isFlipped = true }
+        }
+        .onChange(of: card) { oldValue, newValue in
+            if oldValue == nil && newValue != nil {
+                isFlipped = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05 * Double(index)) {
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        isFlipped = true
+                    }
+                }
+            } else if newValue == nil {
+                isFlipped = false
+            }
         }
     }
 }
@@ -463,101 +468,228 @@ struct CommunityCardSlot: View {
     var onChanged: () -> Void
     
     @State private var showPicker = false
+    @State private var isFlipped = false
     
     // Determine if this slot is tappable
     var isTappable: Bool {
         if card != nil {
-            // Can tap to remove only the last card(s)
-            return index >= currentCount - 1
+            return true // Can tap to remove
         } else {
-            // Can add based on current count:
             // 0 cards -> can tap slots 0,1,2 (to add flop)
-            // 3 cards -> can tap slot 3 (to add turn)
-            // 4 cards -> can tap slot 4 (to add river)
-            switch currentCount {
-            case 0: return index < 3
-            case 3: return index == 3
-            case 4: return index == 4
-            default: return false
+            // 3+ cards -> can tap any empty slot
+            if currentCount == 0 {
+                return index < 3
+            } else {
+                return index >= currentCount
             }
         }
     }
     
     // How many cards to select
-    var cardsToSelect: Int {
-        switch currentCount {
-        case 0: return 3  // Flop
-        case 3: return 1  // Turn
-        case 4: return 1  // River
-        default: return 0
+    var maxCardsToSelect: Int {
+        if currentCount == 0 {
+            return 3  // Flop: exactly 3
+        } else {
+            return 5 - currentCount  // Turn/River: 1 or 2
+        }
+    }
+    
+    var minCardsToSelect: Int {
+        if currentCount == 0 {
+            return 3  // Flop: exactly 3
+        } else {
+            return 1  // At least 1
         }
     }
     
     var body: some View {
         Button(action: {
             if card != nil {
-                // Remove from this index onwards
-                if currentCount == 5 {
-                    allCards.removeLast()
-                } else if currentCount == 4 {
-                    allCards.removeLast()
-                } else {
-                    allCards.removeAll()
-                }
+                // Remove this card and all after it
+                allCards = Array(allCards.prefix(index))
                 onChanged()
             } else if isTappable {
                 showPicker = true
             }
         }) {
-            ZStack {
-                if let card = card {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.chipWhite)
-                    
-                    VStack(spacing: 0) {
-                        Text(card.rank.symbol)
-                            .font(.system(size: 16, weight: .black))
-                        Text(card.suit.symbol)
-                            .font(.system(size: 14))
-                    }
-                    .foregroundColor(card.suit.color == "red" ? .red : .black)
-                } else {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.black.opacity(isTappable ? 0.4 : 0.2))
-                    
-                    RoundedRectangle(cornerRadius: 6)
-                        .strokeBorder(
-                            Color.chipGold.opacity(isTappable ? 0.5 : 0.2),
-                            style: StrokeStyle(lineWidth: 1.5, dash: [4])
-                        )
-                    
-                    if isTappable {
-                        Image(systemName: "plus")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.chipGold.opacity(0.7))
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .aspectRatio(0.7, contentMode: .fit)
+            FlipCardView(card: card, isFlipped: $isFlipped, isTappable: isTappable)
+                .frame(maxWidth: .infinity)
+                .aspectRatio(0.7, contentMode: .fit)
         }
         .buttonStyle(.plain)
         .disabled(!isTappable && card == nil)
         .sheet(isPresented: $showPicker) {
             CommunityCardPicker(
                 selectedCards: $allCards,
-                requiredCount: cardsToSelect,
+                minCount: minCardsToSelect,
+                maxCount: maxCardsToSelect,
                 excluded: excluded,
-                onDone: onChanged
+                onDone: {
+                    onChanged()
+                    // Trigger flip animation for new cards
+                    isFlipped = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation(.easeInOut(duration: 0.4)) {
+                            isFlipped = true
+                        }
+                    }
+                }
             )
+        }
+        .onAppear {
+            if card != nil {
+                isFlipped = true
+            }
+        }
+        .onChange(of: card) { oldValue, newValue in
+            if oldValue == nil && newValue != nil {
+                isFlipped = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05 * Double(index)) {
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        isFlipped = true
+                    }
+                }
+            } else if newValue == nil {
+                isFlipped = false
+            }
         }
     }
 }
 
-// MARK: - Community Card Picker (enforces exact count)
+// MARK: - Flip Card View with animation
+struct FlipCardView: View {
+    let card: Card?
+    @Binding var isFlipped: Bool
+    let isTappable: Bool
+    
+    var body: some View {
+        ZStack {
+            // Card back
+            CardBackView()
+                .opacity(card != nil && !isFlipped ? 1 : 0)
+                .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
+            
+            // Card front
+            if let card = card {
+                PokerCardFace(card: card)
+                    .opacity(isFlipped ? 1 : 0)
+                    .rotation3DEffect(.degrees(isFlipped ? 0 : -180), axis: (x: 0, y: 1, z: 0))
+            } else {
+                // Empty slot
+                EmptyCardSlot(isTappable: isTappable)
+            }
+        }
+    }
+}
+
+// MARK: - Card Back (for flip animation)
+struct CardBackView: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.chipRed)
+            
+            RoundedRectangle(cornerRadius: 4)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.chipRed.opacity(0.8), Color.chipRed],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .padding(3)
+            
+            // Pattern
+            GeometryReader { geo in
+                Path { path in
+                    let w = geo.size.width
+                    let h = geo.size.height
+                    for i in stride(from: 0, to: w + h, by: 8) {
+                        path.move(to: CGPoint(x: i, y: 0))
+                        path.addLine(to: CGPoint(x: 0, y: i))
+                    }
+                }
+                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .padding(3)
+        }
+    }
+}
+
+// MARK: - Poker Card Face (like real cards)
+struct PokerCardFace: View {
+    let card: Card
+    
+    var cardColor: Color {
+        card.suit.color == "red" ? .red : .black
+    }
+    
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.chipWhite)
+            
+            // Top-left corner
+            VStack(spacing: -2) {
+                Text(card.rank.symbol)
+                    .font(.system(size: 12, weight: .bold))
+                Text(card.suit.symbol)
+                    .font(.system(size: 10))
+            }
+            .foregroundColor(cardColor)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(4)
+            
+            // Bottom-right corner (rotated 180°)
+            VStack(spacing: -2) {
+                Text(card.rank.symbol)
+                    .font(.system(size: 12, weight: .bold))
+                Text(card.suit.symbol)
+                    .font(.system(size: 10))
+            }
+            .foregroundColor(cardColor)
+            .rotationEffect(.degrees(180))
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+            .padding(4)
+            
+            // Center suit
+            Text(card.suit.symbol)
+                .font(.system(size: 24))
+                .foregroundColor(cardColor)
+        }
+    }
+}
+
+// MARK: - Empty Card Slot
+struct EmptyCardSlot: View {
+    let isTappable: Bool
+    
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.black.opacity(isTappable ? 0.4 : 0.2))
+            
+            RoundedRectangle(cornerRadius: 6)
+                .strokeBorder(
+                    Color.chipGold.opacity(isTappable ? 0.5 : 0.2),
+                    style: StrokeStyle(lineWidth: 1.5, dash: [4])
+                )
+            
+            if isTappable {
+                Image(systemName: "plus")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.chipGold.opacity(0.7))
+            }
+        }
+    }
+}
+
+// MARK: - Community Card Picker
 struct CommunityCardPicker: View {
     @Binding var selectedCards: [Card]
-    let requiredCount: Int
+    let minCount: Int
+    let maxCount: Int
     let excluded: Set<Card>
     var onDone: () -> Void
     @Environment(\.dismiss) var dismiss
@@ -565,14 +697,16 @@ struct CommunityCardPicker: View {
     @State private var tempSelection: [Card] = []
     
     var canComplete: Bool {
-        tempSelection.count == requiredCount
+        tempSelection.count >= minCount && tempSelection.count <= maxCount
     }
     
     var title: String {
-        switch requiredCount {
-        case 3: return "选择翻牌 (3张)"
-        case 1: return "选择1张"
-        default: return "选择卡牌"
+        if minCount == 3 {
+            return "选择翻牌 (3张)"
+        } else if maxCount == 1 {
+            return "选择1张"
+        } else {
+            return "选择 \(minCount)-\(maxCount) 张"
         }
     }
     
@@ -603,9 +737,14 @@ struct CommunityCardPicker: View {
                 
                 // Selection indicator
                 HStack {
-                    Text("已选: \(tempSelection.count)/\(requiredCount)")
+                    Text("已选: \(tempSelection.count)")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.white)
+                    if minCount == maxCount {
+                        Text("/ \(minCount)")
+                            .font(.system(size: 14))
+                            .foregroundColor(.white.opacity(0.5))
+                    }
                     Spacer()
                     if !tempSelection.isEmpty {
                         Button("清除") { tempSelection.removeAll() }
@@ -633,7 +772,7 @@ struct CommunityCardPicker: View {
                                         let card = Card(suit: suit, rank: rank)
                                         let isExcluded = excluded.contains(card) || selectedCards.contains(card)
                                         let isSelected = tempSelection.contains(card)
-                                        let canSelect = tempSelection.count < requiredCount || isSelected
+                                        let canSelect = tempSelection.count < maxCount || isSelected
                                         
                                         Button(action: {
                                             if isSelected {
