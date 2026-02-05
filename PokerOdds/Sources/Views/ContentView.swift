@@ -32,7 +32,7 @@ struct ContentView: View {
             VStack(spacing: 0) {
                 // Scrollable content
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 14) {
                         // Header
                         headerView
                         
@@ -84,28 +84,27 @@ struct ContentView: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text("POKER ODDS")
-                    .font(.system(size: 20, weight: .black))
+                    .font(.system(size: 24, weight: .black))
                     .foregroundColor(.chipGold)
                 Text("德州扑克胜率计算器")
-                    .font(.system(size: 11))
+                    .font(.system(size: 13))
                     .foregroundColor(.white.opacity(0.7))
             }
             Spacer()
-            HStack(spacing: -6) {
-                ChipView(color: .chipRed, size: 24)
-                ChipView(color: .chipGold, size: 24)
-                ChipView(color: .chipBlack, size: 24)
+            HStack(spacing: -8) {
+                ChipView(color: .chipRed, size: 30)
+                ChipView(color: .chipGold, size: 30)
+                ChipView(color: .chipBlack, size: 30)
             }
         }
     }
     
     func cardSection(title: String, emoji: String, cards: Binding<[Card]>, maxCards: Int, excluded: Set<Card>) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(emoji)
-                    .font(.system(size: 12))
                 Text(title)
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 13, weight: .bold))
                     .tracking(1)
                     .foregroundColor(.chipGold)
                 Spacer()
@@ -115,13 +114,13 @@ struct ContentView: View {
                         result = nil
                     }) {
                         Text("CLEAR")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.system(size: 11, weight: .bold))
                             .foregroundColor(.chipRed)
                     }
                 }
             }
             
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 ForEach(0..<maxCards, id: \.self) { index in
                     CasinoCardSlot(
                         card: index < cards.wrappedValue.count ? cards.wrappedValue[index] : nil,
@@ -137,7 +136,7 @@ struct ContentView: View {
                 }
             }
         }
-        .padding(12)
+        .padding(14)
         .background(Color.black.opacity(0.3))
         .cornerRadius(12)
         .overlay(
@@ -303,21 +302,20 @@ struct ChipSelector: View {
     var onChange: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("👥")
-                    .font(.system(size: 12))
                 Text("OPPONENTS")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 13, weight: .bold))
                     .tracking(1)
                     .foregroundColor(.chipGold)
                 Spacer()
                 Text("\(selected)")
-                    .font(.system(size: 18, weight: .black))
+                    .font(.system(size: 20, weight: .black))
                     .foregroundColor(.white)
             }
             
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
                 ForEach(1...9, id: \.self) { num in
                     Button(action: {
                         selected = num
@@ -325,17 +323,17 @@ struct ChipSelector: View {
                     }) {
                         ZStack {
                             if selected == num {
-                                ChipView(color: .chipGold, size: 30)
+                                ChipView(color: .chipGold, size: 34)
                             } else {
                                 Circle()
                                     .fill(Color.black.opacity(0.4))
-                                    .frame(width: 30, height: 30)
+                                    .frame(width: 34, height: 34)
                                 Circle()
                                     .strokeBorder(Color.white.opacity(0.2), lineWidth: 1)
-                                    .frame(width: 30, height: 30)
+                                    .frame(width: 34, height: 34)
                             }
                             Text("\(num)")
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.system(size: 14, weight: .bold))
                                 .foregroundColor(selected == num ? .black : .white.opacity(0.7))
                         }
                     }
@@ -343,7 +341,7 @@ struct ChipSelector: View {
                 }
             }
         }
-        .padding(12)
+        .padding(14)
         .background(Color.black.opacity(0.3))
         .cornerRadius(12)
         .overlay(
@@ -380,9 +378,9 @@ struct CasinoCardSlot: View {
                     
                     VStack(spacing: 0) {
                         Text(card.rank.symbol)
-                            .font(.system(size: compact ? 14 : 20, weight: .black))
+                            .font(.system(size: compact ? 18 : 20, weight: .black))
                         Text(card.suit.symbol)
-                            .font(.system(size: compact ? 12 : 18))
+                            .font(.system(size: compact ? 16 : 18))
                     }
                     .foregroundColor(card.suit.color == "red" ? .red : .black)
                 } else {
@@ -394,12 +392,12 @@ struct CasinoCardSlot: View {
                         .strokeBorder(Color.chipGold.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [4]))
                     
                     Image(systemName: "plus")
-                        .font(.system(size: compact ? 14 : 20, weight: .bold))
+                        .font(.system(size: compact ? 18 : 20, weight: .bold))
                         .foregroundColor(.chipGold.opacity(0.7))
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: compact ? 56 : nil)
+            .frame(height: compact ? 70 : nil)
             .aspectRatio(compact ? nil : 0.7, contentMode: .fit)
         }
         .buttonStyle(.plain)
@@ -510,38 +508,38 @@ struct ResultsView: View {
     let result: OddsResult
     
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 14) {
             // Win rate row
-            HStack(spacing: 16) {
+            HStack(spacing: 12) {
                 // Big win rate
-                VStack(spacing: 2) {
+                VStack(spacing: 4) {
                     Text("WIN")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 11, weight: .bold))
                         .foregroundColor(.chipGold)
                     Text(String(format: "%.1f%%", result.winRate))
-                        .font(.system(size: 32, weight: .black))
+                        .font(.system(size: 36, weight: .black))
                         .foregroundColor(.green)
                 }
                 .frame(maxWidth: .infinity)
                 
                 // Tie
-                VStack(spacing: 2) {
+                VStack(spacing: 4) {
                     Text("TIE")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 11, weight: .bold))
                         .foregroundColor(.chipGold)
                     Text(String(format: "%.1f%%", result.tieRate))
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.system(size: 22, weight: .bold))
                         .foregroundColor(.yellow)
                 }
                 .frame(maxWidth: .infinity)
                 
                 // Lose
-                VStack(spacing: 2) {
+                VStack(spacing: 4) {
                     Text("LOSE")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 11, weight: .bold))
                         .foregroundColor(.chipGold)
                     Text(String(format: "%.1f%%", result.loseRate))
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.system(size: 22, weight: .bold))
                         .foregroundColor(.chipRed)
                 }
                 .frame(maxWidth: .infinity)
@@ -557,24 +555,24 @@ struct ResultsView: View {
                     Rectangle().fill(Color.chipRed)
                         .frame(width: geo.size.width * result.loseRate / 100)
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .clipShape(RoundedRectangle(cornerRadius: 5))
             }
-            .frame(height: 8)
+            .frame(height: 10)
             
             // Best hand & sims
             if let hand = result.bestHand {
                 HStack {
                     Text("最佳: \(hand.description)")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(.white)
                     Spacer()
                     Text("\(result.simulations.formatted()) 次模拟")
-                        .font(.system(size: 11))
+                        .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.5))
                 }
             }
         }
-        .padding(12)
+        .padding(14)
         .background(Color.black.opacity(0.3))
         .cornerRadius(12)
         .overlay(
