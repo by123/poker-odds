@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Poker Odds App Icon</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #1a1a1a;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        .icon-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+        }
+        .icon {
+            width: 1024px;
+            height: 1024px;
+            border-radius: 224px; /* iOS icon radius ratio */
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(145deg, #0d5c2d 0%, #073d1d 50%, #052912 100%);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        /* Felt texture */
+        .felt-texture {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 50% 30%, rgba(255,255,255,0.05) 0%, transparent 50%);
+        }
+        /* Main chip */
+        .chip {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 700px;
+            height: 700px;
+        }
+        .chip-body {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #d4a726 0%, #b8941f 50%, #9a7c1a 100%);
+            position: relative;
+            box-shadow: 
+                0 15px 40px rgba(0,0,0,0.4),
+                inset 0 -5px 20px rgba(0,0,0,0.3),
+                inset 0 5px 20px rgba(255,255,255,0.2);
+        }
+        /* Chip inner ring */
+        .chip-inner-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 520px;
+            height: 520px;
+            border-radius: 50%;
+            border: 20px solid rgba(255,255,255,0.25);
+        }
+        /* Chip edge dashes */
+        .chip-dash {
+            position: absolute;
+            width: 80px;
+            height: 25px;
+            background: white;
+            border-radius: 4px;
+            top: 50%;
+            left: 50%;
+            transform-origin: center center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        /* Center design */
+        .chip-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .spade {
+            font-size: 180px;
+            color: white;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            margin-bottom: -10px;
+        }
+        .percent {
+            font-size: 80px;
+            font-weight: 900;
+            color: #d4a726;
+            letter-spacing: -5px;
+        }
+        /* Small preview */
+        .preview {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .preview-icon {
+            border-radius: 22%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .preview-label {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="icon-container">
+        <div class="icon">
+            <div class="felt-texture"></div>
+            <div class="chip">
+                <div class="chip-body">
+                    <div class="chip-inner-ring"></div>
+                    <!-- 8 edge dashes -->
+                    <div class="chip-dash" style="transform: translate(-50%, -50%) rotate(0deg) translateX(310px);"></div>
+                    <div class="chip-dash" style="transform: translate(-50%, -50%) rotate(45deg) translateX(310px);"></div>
+                    <div class="chip-dash" style="transform: translate(-50%, -50%) rotate(90deg) translateX(310px);"></div>
+                    <div class="chip-dash" style="transform: translate(-50%, -50%) rotate(135deg) translateX(310px);"></div>
+                    <div class="chip-dash" style="transform: translate(-50%, -50%) rotate(180deg) translateX(310px);"></div>
+                    <div class="chip-dash" style="transform: translate(-50%, -50%) rotate(225deg) translateX(310px);"></div>
+                    <div class="chip-dash" style="transform: translate(-50%, -50%) rotate(270deg) translateX(310px);"></div>
+                    <div class="chip-dash" style="transform: translate(-50%, -50%) rotate(315deg) translateX(310px);"></div>
+                    <div class="chip-center">
+                        <div class="spade">♠</div>
+                        <div class="percent">%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="preview">
+            <div>
+                <canvas id="canvas180" width="180" height="180" class="preview-icon"></canvas>
+                <div class="preview-label">180×180 (iPhone)</div>
+            </div>
+            <div>
+                <canvas id="canvas120" width="120" height="120" class="preview-icon"></canvas>
+                <div class="preview-label">120×120</div>
+            </div>
+            <div>
+                <canvas id="canvas60" width="60" height="60" class="preview-icon"></canvas>
+                <div class="preview-label">60×60</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Draw previews on load
+        window.onload = function() {
+            // We'll use html2canvas if available, otherwise just show the CSS version
+            console.log("Icon ready! Right-click the large icon to save, or use a screenshot tool.");
+            console.log("For best results, use Safari's Web Inspector to screenshot at 1024x1024");
+        };
+    </script>
+</body>
+</html>
