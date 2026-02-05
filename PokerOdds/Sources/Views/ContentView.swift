@@ -49,13 +49,7 @@ struct ContentView: View {
                         )
                         
                         // Community cards
-                        cardSection(
-                            title: "COMMUNITY",
-                            emoji: "🃏",
-                            cards: $communityCards,
-                            maxCards: 5,
-                            excluded: Set(holeCards)
-                        )
+                        communityCardSection
                         
                         // Stage indicator
                         stageChip
@@ -132,6 +126,49 @@ struct ContentView: View {
                     .onChange(of: cards.wrappedValue) { _, _ in
                         result = nil
                     }
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.black.opacity(0.3))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(Color.chipGold.opacity(0.3), lineWidth: 1)
+        )
+    }
+    
+    var communityCardSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("🃏")
+                Text("COMMUNITY")
+                    .font(.system(size: 13, weight: .bold))
+                    .tracking(1)
+                    .foregroundColor(.chipGold)
+                Spacer()
+                if !communityCards.isEmpty {
+                    Button(action: {
+                        communityCards.removeAll()
+                        result = nil
+                    }) {
+                        Text("CLEAR")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.chipRed)
+                    }
+                }
+            }
+            
+            HStack(spacing: 8) {
+                ForEach(0..<5, id: \.self) { index in
+                    CommunityCardSlot(
+                        card: index < communityCards.count ? communityCards[index] : nil,
+                        index: index,
+                        currentCount: communityCards.count,
+                        allCards: $communityCards,
+                        excluded: Set(holeCards),
+                        onChanged: { result = nil }
+                    )
                 }
             }
         }
@@ -412,6 +449,232 @@ struct CasinoCardSlot: View {
                 maxCards: maxCards,
                 excluded: excluded
             )
+        }
+    }
+}
+
+// MARK: - Community Card Slot (with flop/turn/river rules)
+struct CommunityCardSlot: View {
+    let card: Card?
+    let index: Int
+    let currentCount: Int
+    @Binding var allCards: [Card]
+    let excluded: Set<Card>
+    var onChanged: () -> Void
+    
+    @State private var showPicker = false
+    
+    // Determine if this slot is tappable
+    var isTappable: Bool {
+        if card != nil {
+            // Can tap to remove only the last card(s)
+            return index >= currentCount - 1
+        } else {
+            // Can add based on current count:
+            // 0 cards -> can tap slots 0,1,2 (to add flop)
+            // 3 cards -> can tap slot 3 (to add turn)
+            // 4 cards -> can tap slot 4 (to add river)
+            switch currentCount {
+            case 0: return index < 3
+            case 3: return index == 3
+            case 4: return index == 4
+            default: return false
+            }
+        }
+    }
+    
+    // How many cards to select
+    var cardsToSelect: Int {
+        switch currentCount {
+        case 0: return 3  // Flop
+        case 3: return 1  // Turn
+        case 4: return 1  // River
+        default: return 0
+        }
+    }
+    
+    var body: some View {
+        Button(action: {
+            if card != nil {
+                // Remove from this index onwards
+                if currentCount == 5 {
+                    allCards.removeLast()
+                } else if currentCount == 4 {
+                    allCards.removeLast()
+                } else {
+                    allCards.removeAll()
+                }
+                onChanged()
+            } else if isTappable {
+                showPicker = true
+            }
+        }) {
+            ZStack {
+                if let card = card {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.chipWhite)
+                    
+                    VStack(spacing: 0) {
+                        Text(card.rank.symbol)
+                            .font(.system(size: 16, weight: .black))
+                        Text(card.suit.symbol)
+                            .font(.system(size: 14))
+                    }
+                    .foregroundColor(card.suit.color == "red" ? .red : .black)
+                } else {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.black.opacity(isTappable ? 0.4 : 0.2))
+                    
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(
+                            Color.chipGold.opacity(isTappable ? 0.5 : 0.2),
+                            style: StrokeStyle(lineWidth: 1.5, dash: [4])
+                        )
+                    
+                    if isTappable {
+                        Image(systemName: "plus")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.chipGold.opacity(0.7))
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .aspectRatio(0.7, contentMode: .fit)
+        }
+        .buttonStyle(.plain)
+        .disabled(!isTappable && card == nil)
+        .sheet(isPresented: $showPicker) {
+            CommunityCardPicker(
+                selectedCards: $allCards,
+                requiredCount: cardsToSelect,
+                excluded: excluded,
+                onDone: onChanged
+            )
+        }
+    }
+}
+
+// MARK: - Community Card Picker (enforces exact count)
+struct CommunityCardPicker: View {
+    @Binding var selectedCards: [Card]
+    let requiredCount: Int
+    let excluded: Set<Card>
+    var onDone: () -> Void
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var tempSelection: [Card] = []
+    
+    var canComplete: Bool {
+        tempSelection.count == requiredCount
+    }
+    
+    var title: String {
+        switch requiredCount {
+        case 3: return "选择翻牌 (3张)"
+        case 1: return "选择1张"
+        default: return "选择卡牌"
+        }
+    }
+    
+    var body: some View {
+        ZStack {
+            Color.feltGreen.ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                HStack {
+                    Button("取消") { dismiss() }
+                        .foregroundColor(.chipRed)
+                    Spacer()
+                    Text(title)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.chipGold)
+                    Spacer()
+                    Button("完成") {
+                        selectedCards.append(contentsOf: tempSelection)
+                        onDone()
+                        dismiss()
+                    }
+                    .fontWeight(.bold)
+                    .foregroundColor(canComplete ? .chipGold : .gray)
+                    .disabled(!canComplete)
+                }
+                .padding()
+                .background(Color.black.opacity(0.3))
+                
+                // Selection indicator
+                HStack {
+                    Text("已选: \(tempSelection.count)/\(requiredCount)")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+                    Spacer()
+                    if !tempSelection.isEmpty {
+                        Button("清除") { tempSelection.removeAll() }
+                            .font(.system(size: 13))
+                            .foregroundColor(.chipRed)
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                
+                ScrollView {
+                    VStack(spacing: 20) {
+                        ForEach([Suit.spades, .hearts, .clubs, .diamonds], id: \.self) { suit in
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text(suit.symbol)
+                                        .font(.title3)
+                                    Text(suitName(suit))
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundColor(suit.color == "red" ? .red : .white)
+                                }
+                                
+                                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) {
+                                    ForEach(Rank.allCases.reversed(), id: \.self) { rank in
+                                        let card = Card(suit: suit, rank: rank)
+                                        let isExcluded = excluded.contains(card) || selectedCards.contains(card)
+                                        let isSelected = tempSelection.contains(card)
+                                        let canSelect = tempSelection.count < requiredCount || isSelected
+                                        
+                                        Button(action: {
+                                            if isSelected {
+                                                tempSelection.removeAll { $0 == card }
+                                            } else if !isExcluded && canSelect {
+                                                tempSelection.append(card)
+                                            }
+                                        }) {
+                                            ZStack {
+                                                RoundedRectangle(cornerRadius: 6)
+                                                    .fill(isSelected ? Color.chipGold : Color.chipWhite)
+                                                VStack(spacing: 0) {
+                                                    Text(rank.symbol)
+                                                        .font(.system(size: 14, weight: .bold))
+                                                    Text(suit.symbol)
+                                                        .font(.system(size: 12))
+                                                }
+                                                .foregroundColor(isSelected ? .black : (suit.color == "red" ? .red : .black))
+                                            }
+                                            .aspectRatio(0.75, contentMode: .fit)
+                                            .opacity(isExcluded && !isSelected ? 0.3 : 1)
+                                        }
+                                        .disabled(isExcluded && !isSelected)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(16)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+    
+    func suitName(_ suit: Suit) -> String {
+        switch suit {
+        case .spades: return "SPADES"
+        case .hearts: return "HEARTS"
+        case .diamonds: return "DIAMONDS"
+        case .clubs: return "CLUBS"
         }
     }
 }
