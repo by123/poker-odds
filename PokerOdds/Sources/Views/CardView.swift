@@ -69,32 +69,50 @@ struct CardPickerView: View {
     @State private var showingPicker = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(title)
+                    .font(.headline)
+                Spacer()
+                if !selectedCards.isEmpty {
+                    Button(action: { selectedCards.removeAll() }) {
+                        Text("清除")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                }
+            }
             
-            HStack(spacing: 8) {
-                ForEach(0..<maxCards, id: \.self) { index in
-                    let card = index < selectedCards.count ? selectedCards[index] : nil
-                    CardView(card: card, size: .medium)
-                        .onTapGesture {
-                            if card != nil {
-                                selectedCards.remove(at: index)
-                            } else {
-                                showingPicker = true
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(0..<maxCards, id: \.self) { index in
+                        let card = index < selectedCards.count ? selectedCards[index] : nil
+                        CardView(card: card, size: .large)
+                            .onTapGesture {
+                                if card != nil {
+                                    selectedCards.remove(at: index)
+                                } else {
+                                    showingPicker = true
+                                }
+                            }
+                    }
+                    
+                    if selectedCards.count < maxCards {
+                        Button(action: { showingPicker = true }) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color(.systemGray5))
+                                    .frame(width: 70, height: 98)
+                                Image(systemName: "plus")
+                                    .font(.title)
+                                    .foregroundColor(.blue)
                             }
                         }
-                }
-                
-                if selectedCards.count < maxCards {
-                    Button(action: { showingPicker = true }) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.blue)
                     }
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .sheet(isPresented: $showingPicker) {
             CardSelectionSheet(
                 selectedCards: $selectedCards,

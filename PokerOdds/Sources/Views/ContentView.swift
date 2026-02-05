@@ -16,7 +16,7 @@ struct ContentView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     // Opponents selector
@@ -56,12 +56,13 @@ struct ContentView: View {
                     if let result = result {
                         resultsView(result)
                     }
-                    
-                    Spacer(minLength: 50)
                 }
                 .padding()
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("♠️ 德州扑克计算器")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: resetAll) {
@@ -73,26 +74,29 @@ struct ContentView: View {
     }
     
     var opponentsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("👥 对手数量")
                 .font(.headline)
             
-            HStack(spacing: 12) {
-                ForEach(1...9, id: \.self) { num in
-                    Button(action: { 
-                        numOpponents = num
-                        clearResult()
-                    }) {
-                        Text("\(num)")
-                            .font(.headline)
-                            .frame(width: 32, height: 32)
-                            .background(numOpponents == num ? Color.blue : Color.gray.opacity(0.2))
-                            .foregroundColor(numOpponents == num ? .white : .primary)
-                            .clipShape(Circle())
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(1...9, id: \.self) { num in
+                        Button(action: { 
+                            numOpponents = num
+                            clearResult()
+                        }) {
+                            Text("\(num)")
+                                .font(.headline)
+                                .frame(width: 44, height: 44)
+                                .background(numOpponents == num ? Color.blue : Color(.systemGray5))
+                                .foregroundColor(numOpponents == num ? .white : .primary)
+                                .clipShape(Circle())
+                        }
                     }
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
     
     var stageIndicator: some View {
@@ -102,7 +106,11 @@ struct ContentView: View {
             Text(stageName)
                 .font(.headline)
                 .foregroundColor(stageColor)
+            Spacer()
         }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
     }
     
     var stageName: String {
@@ -150,22 +158,24 @@ struct ContentView: View {
         VStack(spacing: 16) {
             Text("📊 计算结果")
                 .font(.headline)
+                .frame(maxWidth: .infinity, alignment: .leading)
             
-            // Win rate bar
-            VStack(spacing: 8) {
+            // Win rate display
+            VStack(spacing: 12) {
                 HStack {
                     Text("胜率")
+                        .font(.title3)
                     Spacer()
                     Text(String(format: "%.1f%%", result.winRate))
-                        .font(.title2)
-                        .fontWeight(.bold)
+                        .font(.system(size: 36, weight: .bold))
                         .foregroundColor(.green)
                 }
                 
+                // Progress bar
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.gray.opacity(0.2))
+                            .fill(Color(.systemGray5))
                         
                         HStack(spacing: 0) {
                             Rectangle()
@@ -181,49 +191,61 @@ struct ContentView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                 }
-                .frame(height: 24)
+                .frame(height: 28)
                 
+                // Legend
                 HStack {
-                    Label(String(format: "%.1f%%", result.winRate), systemImage: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                        .font(.caption)
+                    HStack(spacing: 4) {
+                        Circle().fill(Color.green).frame(width: 10, height: 10)
+                        Text("胜 \(String(format: "%.1f%%", result.winRate))")
+                            .font(.caption)
+                    }
                     Spacer()
-                    Label(String(format: "%.1f%%", result.tieRate), systemImage: "equal.circle.fill")
-                        .foregroundColor(.yellow)
-                        .font(.caption)
+                    HStack(spacing: 4) {
+                        Circle().fill(Color.yellow).frame(width: 10, height: 10)
+                        Text("平 \(String(format: "%.1f%%", result.tieRate))")
+                            .font(.caption)
+                    }
                     Spacer()
-                    Label(String(format: "%.1f%%", result.loseRate), systemImage: "xmark.circle.fill")
-                        .foregroundColor(.red)
-                        .font(.caption)
+                    HStack(spacing: 4) {
+                        Circle().fill(Color.red).frame(width: 10, height: 10)
+                        Text("负 \(String(format: "%.1f%%", result.loseRate))")
+                            .font(.caption)
+                    }
                 }
             }
             .padding()
-            .background(Color(.systemGray6))
+            .background(Color(.systemBackground))
             .cornerRadius(12)
             
-            // Stats
-            HStack {
-                VStack {
+            // Stats row
+            HStack(spacing: 16) {
+                VStack(spacing: 4) {
                     Text("模拟次数")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text("\(result.simulations)")
+                    Text("\(result.simulations.formatted())")
                         .font(.headline)
                 }
-                Spacer()
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
+                
                 if let hand = result.bestHand {
-                    VStack {
+                    VStack(spacing: 4) {
                         Text("最佳牌型")
                             .font(.caption)
                             .foregroundColor(.secondary)
                         Text(hand.description)
                             .font(.headline)
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color(.systemBackground))
+                    .cornerRadius(12)
                 }
             }
-            .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(12)
         }
     }
     
