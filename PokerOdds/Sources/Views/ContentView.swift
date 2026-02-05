@@ -16,6 +16,9 @@ struct ContentView: View {
     @State private var result: OddsResult?
     @State private var isCalculating = false
     
+    // 统一的屏幕边距
+    private let screenPadding: CGFloat = 20
+    
     var canCalculate: Bool {
         holeCards.count == 2
     }
@@ -62,18 +65,16 @@ struct ContentView: View {
                             ResultsView(result: result)
                         }
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, screenPadding)
                     .padding(.top, 16)
                     .padding(.bottom, 100)
                 }
                 
-                // Fixed bottom button
-                VStack(spacing: 0) {
-                    calculateButton
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
-                }
-                .background(.ultraThinMaterial.opacity(0.8))
+                // Fixed bottom button - 使用相同的边距
+                calculateButton
+                    .padding(.horizontal, screenPadding)
+                    .padding(.vertical, 12)
+                    .background(.ultraThinMaterial.opacity(0.8))
             }
         }
         .preferredColorScheme(.dark)
