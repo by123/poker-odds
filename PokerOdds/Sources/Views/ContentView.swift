@@ -62,7 +62,7 @@ struct ContentView: View {
                         
                         // Results
                         if let result = result {
-                            ResultsView(result: result)
+                            ResultsView(result: result, onRefine: refineCalculation)
                         }
                     }
                     .padding(.horizontal, screenPadding)
@@ -127,8 +127,7 @@ struct ContentView: View {
                         allCards: cards,
                         index: index,
                         maxCards: maxCards,
-                        excluded: excluded,
-                        compact: true
+                        excluded: excluded
                     )
                     .onChange(of: cards.wrappedValue) { _, _ in
                         result = nil
@@ -210,22 +209,30 @@ struct ContentView: View {
     func calculate() {
         isCalculating = true
         Task {
-            let quickOdds = await OddsCalculator.calculate(
+            let odds = await OddsCalculator.calculate(
                 holeCards: holeCards,
                 communityCards: communityCards,
                 numOpponents: numOpponents,
-                simulations: 5000
+                simulations: 10000
             )
-            await MainActor.run { result = quickOdds }
-            
-            let refinedOdds = await OddsCalculator.calculate(
+            await MainActor.run {
+                result = odds
+                isCalculating = false
+            }
+        }
+    }
+    
+    func refineCalculation() {
+        isCalculating = true
+        Task {
+            let odds = await OddsCalculator.calculate(
                 holeCards: holeCards,
                 communityCards: communityCards,
                 numOpponents: numOpponents,
                 simulations: 50000
             )
             await MainActor.run {
-                result = refinedOdds
+                result = odds
                 isCalculating = false
             }
         }
@@ -358,7 +365,6 @@ struct CasinoCardSlot: View {
     let index: Int
     let maxCards: Int
     let excluded: Set<Card>
-    var compact: Bool = false
     
     @State private var showPicker = false
     
@@ -373,32 +379,31 @@ struct CasinoCardSlot: View {
             ZStack {
                 if let card = card {
                     // Card face
-                    RoundedRectangle(cornerRadius: compact ? 6 : 8)
+                    RoundedRectangle(cornerRadius: 6)
                         .fill(Color.chipWhite)
                     
                     VStack(spacing: 0) {
                         Text(card.rank.symbol)
-                            .font(.system(size: compact ? 18 : 20, weight: .black))
+                            .font(.system(size: 16, weight: .black))
                         Text(card.suit.symbol)
-                            .font(.system(size: compact ? 16 : 18))
+                            .font(.system(size: 14))
                     }
                     .foregroundColor(card.suit.color == "red" ? .red : .black)
                 } else {
                     // Empty slot
-                    RoundedRectangle(cornerRadius: compact ? 6 : 8)
+                    RoundedRectangle(cornerRadius: 6)
                         .fill(Color.black.opacity(0.4))
                     
-                    RoundedRectangle(cornerRadius: compact ? 6 : 8)
+                    RoundedRectangle(cornerRadius: 6)
                         .strokeBorder(Color.chipGold.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [4]))
                     
                     Image(systemName: "plus")
-                        .font(.system(size: compact ? 18 : 20, weight: .bold))
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.chipGold.opacity(0.7))
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: compact ? 70 : nil)
-            .aspectRatio(compact ? nil : 0.7, contentMode: .fit)
+            .aspectRatio(0.7, contentMode: .fit)
         }
         .buttonStyle(.plain)
         .sheet(isPresented: $showPicker) {
@@ -506,6 +511,7 @@ struct CasinoCardPicker: View {
 // MARK: - Results View
 struct ResultsView: View {
     let result: OddsResult
+    var onRefine: (() -> Void)?
     
     var body: some View {
         VStack(spacing: 14) {
@@ -560,15 +566,31 @@ struct ResultsView: View {
             .frame(height: 10)
             
             // Best hand & sims
-            if let hand = result.bestHand {
-                HStack {
+            HStack {
+                if let hand = result.bestHand {
                     Text("最佳: \(hand.description)")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(.white)
-                    Spacer()
-                    Text("\(result.simulations.formatted()) 次模拟")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.5))
+                }
+                Spacer()
+                Text("\(result.simulations.formatted()) 次模拟")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.5))
+            }
+            
+            // Refine button (show if < 50000 sims)
+            if result.simulations < 50000, let onRefine = onRefine {
+                Button(action: onRefine) {
+                    HStack {
+                        Image(systemName: "arrow.clockwise")
+                        Text("精确计算 (50,000次)")
+                    }
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.chipGold)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.chipGold.opacity(0.15))
+                    .cornerRadius(8)
                 }
             }
         }
