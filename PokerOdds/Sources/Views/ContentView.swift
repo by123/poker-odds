@@ -276,14 +276,26 @@ struct ContentView: View {
     func calculate() {
         isCalculating = true
         Task {
-            let odds = await OddsCalculator.calculate(
+            // Quick result first (5000 sims)
+            let quickOdds = await OddsCalculator.calculate(
                 holeCards: holeCards,
                 communityCards: communityCards,
                 numOpponents: numOpponents,
-                simulations: 20000
+                simulations: 5000
             )
             await MainActor.run {
-                result = odds
+                result = quickOdds
+            }
+            
+            // Then refine with more simulations (50000 total)
+            let refinedOdds = await OddsCalculator.calculate(
+                holeCards: holeCards,
+                communityCards: communityCards,
+                numOpponents: numOpponents,
+                simulations: 50000
+            )
+            await MainActor.run {
+                result = refinedOdds
                 isCalculating = false
             }
         }

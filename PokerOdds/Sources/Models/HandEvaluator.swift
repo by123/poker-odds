@@ -34,7 +34,7 @@ enum HandRank: Int, Comparable, CustomStringConvertible {
 
 struct EvaluatedHand: Comparable {
     let rank: HandRank
-    let kickers: [Rank] // For tie-breaking
+    let kickers: [Int] // Using raw values for speed
     
     static func < (lhs: EvaluatedHand, rhs: EvaluatedHand) -> Bool {
         if lhs.rank != rhs.rank {
@@ -45,58 +45,120 @@ struct EvaluatedHand: Comparable {
         }
         return false
     }
+    
+    static func == (lhs: EvaluatedHand, rhs: EvaluatedHand) -> Bool {
+        lhs.rank == rhs.rank && lhs.kickers == rhs.kickers
+    }
 }
 
 struct HandEvaluator {
+    // Pre-computed 5-card combination indices for 7 cards (C(7,5) = 21 combinations)
+    private static let combinationIndices: [[Int]] = [
+        [0,1,2,3,4], [0,1,2,3,5], [0,1,2,3,6], [0,1,2,4,5], [0,1,2,4,6],
+        [0,1,2,5,6], [0,1,3,4,5], [0,1,3,4,6], [0,1,3,5,6], [0,1,4,5,6],
+        [0,2,3,4,5], [0,2,3,4,6], [0,2,3,5,6], [0,2,4,5,6], [0,3,4,5,6],
+        [1,2,3,4,5], [1,2,3,4,6], [1,2,3,5,6], [1,2,4,5,6], [1,3,4,5,6],
+        [2,3,4,5,6]
+    ]
+    
     /// Evaluate the best 5-card hand from 7 cards (2 hole + 5 community)
+    @inline(__always)
     static func evaluate(holeCards: [Card], communityCards: [Card]) -> EvaluatedHand {
         let allCards = holeCards + communityCards
-        guard allCards.count >= 5 else {
-            return EvaluatedHand(rank: .highCard, kickers: allCards.map(\.rank).sorted(by: >))
+        let count = allCards.count
+        
+        guard count >= 5 else {
+            let ranks = allCards.map { $0.rank.rawValue }.sorted(by: >)
+            return EvaluatedHand(rank: .highCard, kickers: ranks)
         }
         
-        // Generate all 5-card combinations
-        let combinations = allCards.combinations(of: 5)
-        return combinations.map { evaluateFiveCards($0) }.max()!
+        if count == 5 {
+            return evaluateFiveCards(allCards)
+        }
+        
+        // For 6 or 7 cards, try all 5-card combinations
+        var best: EvaluatedHand?
+        
+        if count == 7 {
+            for indices in combinationIndices {
+                let hand = [allCards[indices[0]], allCards[indices[1]], allCards[indices[2]], 
+                           allCards[indices[3]], allCards[indices[4]]]
+                let evaluated = evaluateFiveCards(hand)
+                if best == nil || evaluated > best! {
+                    best = evaluated
+                }
+            }
+        } else {
+            // 6 cards: C(6,5) = 6 combinations
+            for skip in 0..<count {
+                var hand: [Card] = []
+                for i in 0..<count where i != skip {
+                    hand.append(allCards[i])
+                }
+                let evaluated = evaluateFiveCards(hand)
+                if best == nil || evaluated > best! {
+                    best = evaluated
+                }
+            }
+        }
+        
+        return best!
     }
     
-    /// Evaluate exactly 5 cards
+    /// Evaluate exactly 5 cards - optimized version
+    @inline(__always)
     static func evaluateFiveCards(_ cards: [Card]) -> EvaluatedHand {
-        let ranks = cards.map(\.rank).sorted(by: >)
-        let suits = cards.map(\.suit)
+        // Count ranks and suits
+        var rankCounts = [Int](repeating: 0, count: 15) // Index 2-14 for ranks
+        var suitCounts = [Int](repeating: 0, count: 4)
+        var ranks = [Int]()
+        ranks.reserveCapacity(5)
         
-        let isFlush = Set(suits).count == 1
-        let rankCounts = Dictionary(grouping: ranks, by: { $0 }).mapValues(\.count)
-        let sortedByCount = rankCounts.sorted { 
-            if $0.value != $1.value { return $0.value > $1.value }
-            return $0.key > $1.key
+        for card in cards {
+            let r = card.rank.rawValue
+            ranks.append(r)
+            rankCounts[r] += 1
+            suitCounts[card.suit.hashValue % 4] += 1
         }
         
-        // Check for straight
-        let uniqueRanks = Array(Set(ranks)).sorted(by: >)
-        let isStraight = checkStraight(uniqueRanks)
-        let straightHighCard = getStraightHighCard(uniqueRanks)
+        ranks.sort(by: >)
+        
+        // Check flush
+        let isFlush = suitCounts.contains(5)
+        
+        // Check straight
+        let (isStraight, straightHigh) = checkStraight(ranks)
+        
+        // Get counts sorted by frequency then rank
+        var pairs: [(rank: Int, count: Int)] = []
+        for i in 2...14 {
+            if rankCounts[i] > 0 {
+                pairs.append((i, rankCounts[i]))
+            }
+        }
+        pairs.sort { a, b in
+            if a.count != b.count { return a.count > b.count }
+            return a.rank > b.rank
+        }
         
         // Royal Flush
-        if isFlush && isStraight && straightHighCard == .ace && !uniqueRanks.contains(.five) {
-            return EvaluatedHand(rank: .royalFlush, kickers: [.ace])
+        if isFlush && isStraight && straightHigh == 14 {
+            return EvaluatedHand(rank: .royalFlush, kickers: [14])
         }
         
         // Straight Flush
         if isFlush && isStraight {
-            return EvaluatedHand(rank: .straightFlush, kickers: [straightHighCard!])
+            return EvaluatedHand(rank: .straightFlush, kickers: [straightHigh])
         }
         
         // Four of a Kind
-        if sortedByCount[0].value == 4 {
-            let quad = sortedByCount[0].key
-            let kicker = sortedByCount[1].key
-            return EvaluatedHand(rank: .fourOfAKind, kickers: [quad, kicker])
+        if pairs[0].count == 4 {
+            return EvaluatedHand(rank: .fourOfAKind, kickers: [pairs[0].rank, pairs[1].rank])
         }
         
         // Full House
-        if sortedByCount[0].value == 3 && sortedByCount[1].value == 2 {
-            return EvaluatedHand(rank: .fullHouse, kickers: [sortedByCount[0].key, sortedByCount[1].key])
+        if pairs[0].count == 3 && pairs.count > 1 && pairs[1].count >= 2 {
+            return EvaluatedHand(rank: .fullHouse, kickers: [pairs[0].rank, pairs[1].rank])
         }
         
         // Flush
@@ -106,102 +168,51 @@ struct HandEvaluator {
         
         // Straight
         if isStraight {
-            return EvaluatedHand(rank: .straight, kickers: [straightHighCard!])
+            return EvaluatedHand(rank: .straight, kickers: [straightHigh])
         }
         
         // Three of a Kind
-        if sortedByCount[0].value == 3 {
-            let trip = sortedByCount[0].key
-            let kickers = sortedByCount.dropFirst().map(\.key).sorted(by: >)
-            return EvaluatedHand(rank: .threeOfAKind, kickers: [trip] + kickers)
+        if pairs[0].count == 3 {
+            let kickers = pairs.dropFirst().prefix(2).map { $0.rank }
+            return EvaluatedHand(rank: .threeOfAKind, kickers: [pairs[0].rank] + kickers)
         }
         
         // Two Pair
-        if sortedByCount[0].value == 2 && sortedByCount[1].value == 2 {
-            let pairs = [sortedByCount[0].key, sortedByCount[1].key].sorted(by: >)
-            let kicker = sortedByCount[2].key
-            return EvaluatedHand(rank: .twoPair, kickers: pairs + [kicker])
+        if pairs[0].count == 2 && pairs.count > 1 && pairs[1].count == 2 {
+            let high = max(pairs[0].rank, pairs[1].rank)
+            let low = min(pairs[0].rank, pairs[1].rank)
+            let kicker = pairs.count > 2 ? pairs[2].rank : 0
+            return EvaluatedHand(rank: .twoPair, kickers: [high, low, kicker])
         }
         
         // One Pair
-        if sortedByCount[0].value == 2 {
-            let pair = sortedByCount[0].key
-            let kickers = sortedByCount.dropFirst().map(\.key).sorted(by: >)
-            return EvaluatedHand(rank: .onePair, kickers: [pair] + kickers)
+        if pairs[0].count == 2 {
+            let kickers = pairs.dropFirst().prefix(3).map { $0.rank }
+            return EvaluatedHand(rank: .onePair, kickers: [pairs[0].rank] + kickers)
         }
         
         // High Card
         return EvaluatedHand(rank: .highCard, kickers: ranks)
     }
     
-    private static func checkStraight(_ uniqueRanks: [Rank]) -> Bool {
-        guard uniqueRanks.count >= 5 else { return false }
+    @inline(__always)
+    private static func checkStraight(_ sortedRanks: [Int]) -> (Bool, Int) {
+        let unique = Array(Set(sortedRanks)).sorted(by: >)
+        guard unique.count >= 5 else { return (false, 0) }
         
-        // Check regular straight
-        for i in 0...(uniqueRanks.count - 5) {
-            let slice = uniqueRanks[i..<(i+5)]
-            if isConsecutive(Array(slice)) { return true }
+        // Check regular straights
+        for i in 0...(unique.count - 5) {
+            if unique[i] - unique[i + 4] == 4 {
+                return (true, unique[i])
+            }
         }
         
         // Check wheel (A-2-3-4-5)
-        let wheelRanks: Set<Rank> = [.ace, .two, .three, .four, .five]
-        if wheelRanks.isSubset(of: Set(uniqueRanks)) { return true }
-        
-        return false
-    }
-    
-    private static func isConsecutive(_ ranks: [Rank]) -> Bool {
-        for i in 0..<(ranks.count - 1) {
-            if ranks[i].rawValue - ranks[i+1].rawValue != 1 { return false }
-        }
-        return true
-    }
-    
-    private static func getStraightHighCard(_ uniqueRanks: [Rank]) -> Rank? {
-        // Check regular straights first
-        for i in 0...(max(0, uniqueRanks.count - 5)) {
-            let slice = Array(uniqueRanks[i..<min(i+5, uniqueRanks.count)])
-            if slice.count == 5 && isConsecutive(slice) {
-                return slice[0]
-            }
+        let wheelSet: Set<Int> = [14, 2, 3, 4, 5]
+        if wheelSet.isSubset(of: Set(unique)) {
+            return (true, 5)
         }
         
-        // Check wheel
-        let wheelRanks: Set<Rank> = [.ace, .two, .three, .four, .five]
-        if wheelRanks.isSubset(of: Set(uniqueRanks)) {
-            return .five // Wheel's high card is 5
-        }
-        
-        return nil
-    }
-}
-
-// Helper extension for combinations
-extension Array {
-    func combinations(of size: Int) -> [[Element]] {
-        guard size <= count else { return [] }
-        guard size > 0 else { return [[]] }
-        guard size < count else { return [self] }
-        
-        var result: [[Element]] = []
-        var indices = [Int](0..<size)
-        
-        while true {
-            result.append(indices.map { self[$0] })
-            
-            var i = size - 1
-            while i >= 0 && indices[i] == count - size + i {
-                i -= 1
-            }
-            
-            if i < 0 { break }
-            
-            indices[i] += 1
-            for j in (i + 1)..<size {
-                indices[j] = indices[j - 1] + 1
-            }
-        }
-        
-        return result
+        return (false, 0)
     }
 }

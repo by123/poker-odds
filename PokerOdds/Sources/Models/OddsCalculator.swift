@@ -8,8 +8,8 @@ struct OddsResult {
     let bestHand: HandRank?
 }
 
-actor OddsCalculator {
-    /// Calculate win probability using Monte Carlo simulation
+struct OddsCalculator {
+    /// Calculate win probability using parallel Monte Carlo simulation
     static func calculate(
         holeCards: [Card],
         communityCards: [Card],
@@ -23,16 +23,79 @@ actor OddsCalculator {
         let usedCards = Set(holeCards + communityCards)
         let cardsNeeded = 5 - communityCards.count
         
+        // Split work across available cores
+        let coreCount = ProcessInfo.processInfo.activeProcessorCount
+        let batchSize = simulations / coreCount
+        
+        // Run parallel simulations
+        let results = await withTaskGroup(of: (wins: Int, ties: Int, losses: Int, bestHand: HandRank).self) { group in
+            for i in 0..<coreCount {
+                let isLastBatch = i == coreCount - 1
+                let count = isLastBatch ? simulations - (batchSize * i) : batchSize
+                
+                group.addTask {
+                    runSimulationBatch(
+                        holeCards: holeCards,
+                        communityCards: communityCards,
+                        usedCards: usedCards,
+                        cardsNeeded: cardsNeeded,
+                        numOpponents: numOpponents,
+                        count: count
+                    )
+                }
+            }
+            
+            var totalWins = 0
+            var totalTies = 0
+            var totalLosses = 0
+            var bestHandSeen: HandRank = .highCard
+            
+            for await result in group {
+                totalWins += result.wins
+                totalTies += result.ties
+                totalLosses += result.losses
+                if result.bestHand > bestHandSeen {
+                    bestHandSeen = result.bestHand
+                }
+            }
+            
+            return (totalWins, totalTies, totalLosses, bestHandSeen)
+        }
+        
+        let total = Double(simulations)
+        return OddsResult(
+            winRate: Double(results.0) / total * 100,
+            tieRate: Double(results.1) / total * 100,
+            loseRate: Double(results.2) / total * 100,
+            simulations: simulations,
+            bestHand: results.3
+        )
+    }
+    
+    /// Run a batch of simulations (for parallel execution)
+    private static func runSimulationBatch(
+        holeCards: [Card],
+        communityCards: [Card],
+        usedCards: Set<Card>,
+        cardsNeeded: Int,
+        numOpponents: Int,
+        count: Int
+    ) -> (wins: Int, ties: Int, losses: Int, bestHand: HandRank) {
         var wins = 0
         var ties = 0
         var losses = 0
         var bestHandSeen: HandRank = .highCard
         
-        for _ in 0..<simulations {
-            var deck = Deck(excluding: usedCards)
+        // Pre-build available cards array once
+        let availableCards = Card.allCards.filter { !usedCards.contains($0) }
+        
+        for _ in 0..<count {
+            // Shuffle and deal from available cards
+            var shuffled = availableCards.shuffled()
             
             // Deal remaining community cards
-            let remainingCommunity = deck.draw(cardsNeeded)
+            let remainingCommunity = Array(shuffled.prefix(cardsNeeded))
+            shuffled.removeFirst(cardsNeeded)
             let fullCommunity = communityCards + remainingCommunity
             
             // Evaluate our hand
@@ -42,36 +105,33 @@ actor OddsCalculator {
             }
             
             // Deal and evaluate opponent hands
-            var opponentBest: EvaluatedHand?
-            for _ in 0..<numOpponents {
-                let oppHole = deck.draw(2)
+            var beaten = true
+            var tied = false
+            
+            for i in 0..<numOpponents {
+                let startIdx = i * 2
+                guard startIdx + 1 < shuffled.count else { break }
+                let oppHole = [shuffled[startIdx], shuffled[startIdx + 1]]
                 let oppHand = HandEvaluator.evaluate(holeCards: oppHole, communityCards: fullCommunity)
-                if opponentBest == nil || oppHand > opponentBest! {
-                    opponentBest = oppHand
+                
+                if oppHand > ourHand {
+                    beaten = false
+                    tied = false
+                    break
+                } else if oppHand == ourHand {
+                    tied = true
                 }
             }
             
-            // Compare
-            if let best = opponentBest {
-                if ourHand > best {
-                    wins += 1
-                } else if ourHand < best {
-                    losses += 1
-                } else {
-                    ties += 1
-                }
-            } else {
+            if beaten && !tied {
                 wins += 1
+            } else if tied {
+                ties += 1
+            } else {
+                losses += 1
             }
         }
         
-        let total = Double(simulations)
-        return OddsResult(
-            winRate: Double(wins) / total * 100,
-            tieRate: Double(ties) / total * 100,
-            loseRate: Double(losses) / total * 100,
-            simulations: simulations,
-            bestHand: bestHandSeen
-        )
+        return (wins, ties, losses, bestHandSeen)
     }
 }
