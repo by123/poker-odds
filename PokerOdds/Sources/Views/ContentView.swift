@@ -16,15 +16,14 @@ struct ContentView: View {
     }
     
     var body: some View {
-        GeometryReader { geometry in
+        VStack(spacing: 0) {
+            // Scrollable content
             ScrollView(.vertical, showsIndicators: true) {
-                VStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 16) {
                     // Header
                     Text("♠️ 德州扑克计算器")
                         .font(.largeTitle)
                         .fontWeight(.bold)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, 8)
                     
                     // Opponents selector
                     opponentsSection
@@ -48,22 +47,27 @@ struct ContentView: View {
                     // Stage indicator
                     stageIndicator
                     
-                    // Calculate button
-                    calculateButton
-                    
                     // Results
                     if let result = result {
                         resultsView(result)
                     }
-                    
-                    Spacer(minLength: 40)
                 }
                 .padding(.horizontal, 16)
-                .padding(.bottom, geometry.safeAreaInsets.bottom + 20)
-                .frame(minHeight: geometry.size.height)
+                .padding(.top, 16)
+                .padding(.bottom, 20)
             }
+            
+            // Fixed bottom button
+            VStack(spacing: 0) {
+                Divider()
+                calculateButton
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .padding(.bottom, 8)
+            }
+            .background(Color(.systemGroupedBackground))
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background(Color(.systemGroupedBackground))
     }
     
     var opponentsSection: some View {
@@ -185,9 +189,9 @@ struct ContentView: View {
     }
     
     func resultsView(_ result: OddsResult) -> some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             // Win rate big display
-            VStack(spacing: 8) {
+            VStack(spacing: 4) {
                 Text("胜率")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -196,7 +200,7 @@ struct ContentView: View {
                     .foregroundColor(.green)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 20)
+            .padding(.vertical, 16)
             .background(Color(.systemBackground))
             .cornerRadius(12)
             
