@@ -332,7 +332,7 @@ struct CardSlotView: View {
                     VStack(spacing: 2) {
                         Text(card.rank.symbol)
                             .font(.system(size: 18, weight: .bold))
-                        Text(card.suit.rawValue)
+                        Text(card.suit.symbol)
                             .font(.system(size: 16))
                     }
                     .foregroundColor(card.suit.color == "red" ? .red : .black)
@@ -396,7 +396,7 @@ struct CardPickerSheet: View {
                                             VStack(spacing: 0) {
                                                 Text(rank.symbol)
                                                     .font(.system(size: 14, weight: .bold))
-                                                Text(suit.rawValue)
+                                                Text(suit.symbol)
                                                     .font(.system(size: 12))
                                             }
                                             .foregroundColor(suit.color == "red" ? .red : .black)

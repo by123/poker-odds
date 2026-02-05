@@ -1,10 +1,19 @@
 import Foundation
 
-enum Suit: String, CaseIterable, Codable, Hashable {
-    case spades = "♠"
-    case hearts = "♥"
-    case diamonds = "♦"
-    case clubs = "♣"
+enum Suit: Int, CaseIterable, Codable, Hashable {
+    case spades = 0
+    case hearts = 1
+    case diamonds = 2
+    case clubs = 3
+    
+    var symbol: String {
+        switch self {
+        case .spades: return "♠"
+        case .hearts: return "♥"
+        case .diamonds: return "♦"
+        case .clubs: return "♣"
+        }
+    }
     
     var color: String {
         switch self {
@@ -38,9 +47,9 @@ struct Card: Hashable, Codable, Identifiable {
     let suit: Suit
     let rank: Rank
     
-    var id: String { "\(rank.symbol)\(suit.rawValue)" }
+    var id: String { "\(rank.symbol)\(suit.symbol)" }
     
-    var display: String { "\(rank.symbol)\(suit.rawValue)" }
+    var display: String { "\(rank.symbol)\(suit.symbol)" }
     
     static var allCards: [Card] {
         Suit.allCases.flatMap { suit in

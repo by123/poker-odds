@@ -18,7 +18,7 @@ struct SimpleCardView: View {
             VStack(spacing: 0) {
                 Text(card.rank.symbol)
                     .font(.system(size: 16, weight: .bold))
-                Text(card.suit.rawValue)
+                Text(card.suit.symbol)
                     .font(.system(size: 14))
             }
             .foregroundColor(card.suit.color == "red" ? .red : .black)

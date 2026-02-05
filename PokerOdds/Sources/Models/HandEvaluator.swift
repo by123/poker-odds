@@ -118,7 +118,7 @@ struct HandEvaluator {
             let r = card.rank.rawValue
             ranks.append(r)
             rankCounts[r] += 1
-            suitCounts[card.suit.hashValue % 4] += 1
+            suitCounts[card.suit.rawValue] += 1
         }
         
         ranks.sort(by: >)
