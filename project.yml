@@ -19,10 +19,9 @@ targets:
       - PokerOdds/Sources
     resources:
       - PokerOdds/Resources
+    info:
+      path: PokerOdds/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: "Poker Odds"
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.by123.pokerodds
-      INFOPLIST_GENERATION_MODE: GeneratedFile
-      INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
-      INFOPLIST_KEY_UILaunchScreen_Generation: YES
-      INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait"
-      INFOPLIST_KEY_CFBundleDisplayName: "Poker Odds"
