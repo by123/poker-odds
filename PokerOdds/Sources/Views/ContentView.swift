@@ -97,6 +97,7 @@ struct ContentView: View {
                 ChipView(color: .chipBlack, size: 36)
             }
         }
+        .padding(.horizontal, 16)
         .padding(.bottom, 8)
     }
     
