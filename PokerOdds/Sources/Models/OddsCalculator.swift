@@ -1,4 +1,5 @@
 import Foundation
+import GameplayKit
 
 struct OddsResult {
     let winRate: Double
@@ -9,7 +10,8 @@ struct OddsResult {
 }
 
 struct OddsCalculator {
-    /// Calculate win probability using parallel Monte Carlo simulation
+    /// Calculate win probability using deterministic Monte Carlo simulation
+    /// Same input always produces same output
     static func calculate(
         holeCards: [Card],
         communityCards: [Card],
@@ -20,6 +22,9 @@ struct OddsCalculator {
             return OddsResult(winRate: 0, tieRate: 0, loseRate: 0, simulations: 0, bestHand: nil)
         }
         
+        // Generate deterministic seed from input
+        let seed = generateSeed(holeCards: holeCards, communityCards: communityCards, numOpponents: numOpponents)
+        
         let usedCards = Set(holeCards + communityCards)
         let cardsNeeded = 5 - communityCards.count
         
@@ -27,11 +32,12 @@ struct OddsCalculator {
         let coreCount = ProcessInfo.processInfo.activeProcessorCount
         let batchSize = simulations / coreCount
         
-        // Run parallel simulations
+        // Run parallel simulations with deterministic seeds per batch
         let results = await withTaskGroup(of: (wins: Int, ties: Int, losses: Int, bestHand: HandRank).self) { group in
             for i in 0..<coreCount {
                 let isLastBatch = i == coreCount - 1
                 let count = isLastBatch ? simulations - (batchSize * i) : batchSize
+                let batchSeed = seed &+ UInt64(i * 1000000) // Different but deterministic seed per batch
                 
                 group.addTask {
                     runSimulationBatch(
@@ -40,7 +46,8 @@ struct OddsCalculator {
                         usedCards: usedCards,
                         cardsNeeded: cardsNeeded,
                         numOpponents: numOpponents,
-                        count: count
+                        count: count,
+                        seed: batchSeed
                     )
                 }
             }
@@ -72,26 +79,54 @@ struct OddsCalculator {
         )
     }
     
-    /// Run a batch of simulations (for parallel execution)
+    /// Generate a deterministic seed from the input cards
+    private static func generateSeed(holeCards: [Card], communityCards: [Card], numOpponents: Int) -> UInt64 {
+        var hasher = Hasher()
+        
+        // Sort cards to ensure consistent hashing regardless of selection order
+        let sortedHole = holeCards.sorted { $0.id < $1.id }
+        let sortedCommunity = communityCards.sorted { $0.id < $1.id }
+        
+        for card in sortedHole {
+            hasher.combine(card.id)
+        }
+        for card in sortedCommunity {
+            hasher.combine(card.id)
+        }
+        hasher.combine(numOpponents)
+        
+        let hash = hasher.finalize()
+        return UInt64(bitPattern: Int64(hash))
+    }
+    
+    /// Run a batch of simulations with deterministic randomness
     private static func runSimulationBatch(
         holeCards: [Card],
         communityCards: [Card],
         usedCards: Set<Card>,
         cardsNeeded: Int,
         numOpponents: Int,
-        count: Int
+        count: Int,
+        seed: UInt64
     ) -> (wins: Int, ties: Int, losses: Int, bestHand: HandRank) {
         var wins = 0
         var ties = 0
         var losses = 0
         var bestHandSeen: HandRank = .highCard
         
+        // Use deterministic random generator
+        let randomSource = GKMersenneTwisterRandomSource(seed: seed)
+        
         // Pre-build available cards array once
         let availableCards = Card.allCards.filter { !usedCards.contains($0) }
         
         for _ in 0..<count {
-            // Shuffle and deal from available cards
-            var shuffled = availableCards.shuffled()
+            // Deterministic shuffle using Fisher-Yates with seeded RNG
+            var shuffled = availableCards
+            for i in stride(from: shuffled.count - 1, through: 1, by: -1) {
+                let j = randomSource.nextInt(upperBound: i + 1)
+                shuffled.swapAt(i, j)
+            }
             
             // Deal remaining community cards
             let remainingCommunity = Array(shuffled.prefix(cardsNeeded))
