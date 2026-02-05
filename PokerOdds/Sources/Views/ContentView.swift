@@ -62,7 +62,7 @@ struct ContentView: View {
                             ResultsView(result: result)
                         }
                     }
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, 20)
                     .padding(.top, 16)
                     .padding(.bottom, 100)
                 }
@@ -70,7 +70,7 @@ struct ContentView: View {
                 // Fixed bottom button
                 VStack(spacing: 0) {
                     calculateButton
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, 20)
                         .padding(.vertical, 12)
                 }
                 .background(.ultraThinMaterial.opacity(0.8))
