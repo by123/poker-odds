@@ -925,7 +925,7 @@ struct ResultsView: View {
                         .font(.system(size: 11, weight: .bold))
                         .foregroundColor(.chipGold)
                     Text(String(format: "%.1f%%", result.winRate))
-                        .font(.system(size: 36, weight: .black))
+                        .font(.system(size: 28, weight: .black))
                         .foregroundColor(.green)
                 }
                 .frame(maxWidth: .infinity)
